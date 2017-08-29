@@ -1,0 +1,183 @@
+﻿body {
+    background: url('img/northernLights.jpeg') no-repeat center center fixed;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+}
+
+.jumbotron{
+    background:rgba(255,255,255,0.6);
+    margin-top: 20px;
+}
+
+#nickname{
+    height: 50px;
+    font-size: 2em;
+}
+/*#message-well {*/
+/*height: 300px;*/
+/*}*/
+
+/*#logged-users{*/
+/*height: 300px;*/
+/*}*/
+#message-board, #user-board{
+    height: 300px;
+    border:3px;
+    border-radius: 5px;
+    background-color:rgba(255,255,255,0.5);
+    border-style: solid;
+    border-color: rgba(255,255,255,0.5);
+}
+
+@media (max-width: 900px) {
+    #user-board {
+        height: 100px;
+    }
+}
+
+.scrollable{
+    overflow: auto;
+}
+
+::-webkit-scrollbar {
+    -webkit-appearance: none;
+}
+
+::-webkit-scrollbar:vertical {
+    width: 12px;
+}
+
+::-webkit-scrollbar:horizontal {
+    height: 12px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, .5);
+    border-radius: 10px;
+    border: 1px solid gray;
+}
+
+::-webkit-scrollbar-track {
+    border-radius: 10px;
+    background-color: transparent;
+}
+
+#nickname-well{
+    min-height: 230px
+}
+
+.well{
+    word-wrap: break-word;
+    background:rgba(255,255,255,0.8);
+}
+
+#messages{
+    padding-right: 10px;
+    padding-left: 10px
+}
+dt{
+    margin-top: 10px;
+}
+
+dd{
+    margin-left: 10px;
+}
+
+#sendbutton, #btn-connect, #message-well, #nickname-well{
+    display: none;
+}
+
+.col-centered{
+    float: none;
+    margin: 0 auto;
+}
+
+.invisible-button{
+    min-height: 100px;
+}
+
+span.icon-big{
+    font-size: 1.7em;
+}
+.input-group.input-group-unstyled input.form-control {
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.input-group-unstyled .input-group-addon {
+    border-radius: 4px;
+    border: 0;
+    background-color: transparent;
+}
+
+span.input-group-addon{
+    min-width: 55px;
+    padding-left: 5px;}
+
+.form-group{
+    margin-top: 5px;
+}
+
+.file-input {
+    max-width: 350px;
+}
+
+#myFile {
+    background-color: transparent;
+    border-style: none;
+}
+
+.input-group-addon{
+    margin-top: 0;
+    padding-top: 2px;
+}
+
+/*.large {*/
+/*    max-width: 100%;*/
+/*}*/
+
+.img-responsive-height
+{
+    width: auto;
+    max-height: 400px
+}
+
+.img-responsive-width
+{
+    height: auto;
+    max-width: 100%;
+}
+
+.file-thumbnail {
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    background-color: #D4E8F4;
+    max-width: 50%;
+    min-width: 200px;
+    overflow: hidden;
+    padding: 10px;
+    display: inline-block;
+}
+
+img.enlarge-img {
+    cursor: pointer;
+}
+
+.thumbnail-footer {
+    margin-top: 6px
+}
+
+audio, video {
+    width: 100%;
+}
+
+.date {
+    font-size: 0.7em;
+    color: darkgrey;
+}
+
+

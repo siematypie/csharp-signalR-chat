@@ -1,0 +1,714 @@
+﻿
+@{
+    Layout = "";
+}
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+
+    <title>The ultimate chat</title>
+    <link href="~/Content/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="~/Content/style.css" rel="stylesheet" />
+    <link href="~/Content/sweetalert.css" rel="stylesheet" />
+</head>
+
+
+<body>
+<div class="jumbotron">
+    <h1 class="text-center">The ultimate chat-app!</h1>
+    <p class="text-center">Say something!</p>
+</div>
+
+    
+
+<div class="container">
+        <div class="informer">
+
+        </div>
+        
+        <div class="well" id="nickname-well">
+            <h1 class="text-center">Hi!</h1>
+            <h2 class="text-center">Before you start chatting, please enter your nickname below.</h2>
+            <div class="col-sm-8 col-centered">
+                <div class="form-group">
+                    <input type="text" class="form-control text-center" id="nickname" placeholder="Nickname">
+                </div>
+                <div class="text-center invisible-button">
+                    <button type="submit" id="btn-connect" class="btn btn-default btn-lg">
+                        <span class="text-primary glyphicon glyphicon-log-in icon-big"></span><br /> Enter chat!
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="well" id="message-well">
+            <div class="col-sm-11 col-centered">
+                <div class="row">
+                    <div class="col-md-9">
+
+                        <p>Message board</p>
+                        <input type="hidden" value="" id="oldest-message" />
+                        <div id="message-board" class="scrollable">
+                            <dl id="messages"></dl>
+                        </div>
+                        <form id="message-form" action="#">
+
+                            <div class="form-group">
+                                <label for="message" class="control-label">Your message:</label>
+                                <div class="input-group input-group-unstyled">
+                                    <input type="text" class="form-control" id="myMessage" placeholder="Message">
+                                    <span class="input-group-addon">
+                                        <span id="sendbutton"
+                                              class="text-primary glyphicon glyphicon-send icon-big pull-left">
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group" id="file-upload">
+
+                                <div class="input-group input-group-unstyled file-input">
+                                    <input type="file" class="form-control" id="myFile" placeholder="File">
+                                    <span class="input-group-addon" id="send-file">
+                                        <span class="input-group-addon">
+                                            <button type="button" class="btn btn-default">
+                                                <span class="glyphicon glyphicon-floppy-open icon-big pull-left">
+                                                </span>
+                                            </button>
+                                        </span>
+                                    </span>
+                                </div>
+                                
+                                <p>
+                                    <br> <a id="log_out" href='#' class='log-out'>Log out</a>
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-3">
+                        <p>Users logged in</p>
+                        <div id="user-board" class="scrollable">
+                            <ul id="logged-users"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="myModal" class="modal fade " role="dialog">
+        <div class="modal-dialog large">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <div id="header-content">
+                    </div>
+                    <h4 class="text-center" id="modal-title">file basjkdnaskdnaskjd</h4>
+                </div>
+                <div class="modal-body text-center" id="modal-body">
+
+                </div>
+                <div class="modal-footer">
+                    <div class="text-left pull-left" id="footer-content">
+
+                    </div>
+
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <script src="~/Scripts/jquery-1.10.2.min.js"></script>
+    <script src="~/Scripts/bootstrap.min.js"></script>
+    <script src="~/Scripts/jquery.signalR-2.2.2.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+@*    <script src="http://localhost:54522/signalr/hubs"></script>*@
+
+    <script src="~/Content/sweetalert.min.js"></script>
+
+    <script type="text/javascript">
+//        $.connection.hub.url = 'http://localhost:54522/signalr';
+        
+
+        var mb = 1048576;
+        var map = {
+            "<3": "\u2764\uFE0F",
+            "</3": "\uD83D\uDC94",
+            ":D": "\uD83D\uDE00",
+            ":)": "\uD83D\uDE03",
+            ";)": "\uD83D\uDE09",
+            ":(": "\uD83D\uDE12",
+            ":p": "\uD83D\uDE1B",
+            ";p": "\uD83D\uDE1C",
+            ";(": "\uD83D\uDE22",
+        };
+
+        function escapeSpecialChars(regex) {
+            return regex.replace(/([()[{*+.$^\\|?])/g, '\\$1');
+        }
+
+
+        if (/Android/.test(navigator.appVersion)) {
+            $('input[type="text"]').attr('autocomplete', "off");
+        }
+        var imgid = 0;
+        var chat = $.connection.chatHub;
+        var filesender;
+        var username;
+        var messageBoard = $("#message-board");
+        var nicknameWell = $('#nickname-well');
+        var preventOnScroll = false;
+        var autoScrollingEnabled = true;
+        var $currentWindow = $();
+        var previousMessageBatchRecieved = false;
+
+
+        chat.client.lastMessages = function (messages) {
+            $("#oldest-message").val(messages[messages.length - 1].SentTime);
+            $('#messages').html("");
+            var messageHtml = getMessagesHtml(messages);
+            $("#messages").prepend(messageHtml);
+            setTimeout(function () {
+                messageBoard.scrollTop(messageBoard[0].scrollHeight);
+                previousMessageBatchRecieved = true;
+            }, 100);
+
+        }
+
+    
+        chat.client.olderMessages = function (messages) {
+            $("#oldest-message").val(messages[messages.length - 1].SentTime);
+
+            var lastmsg = $('dt:first');
+            var messageHtml = getMessagesHtml(messages);
+            $("#messages").prepend(messageHtml);
+            setTimeout(function () {
+                
+                $(messageBoard).scrollTop(lastmsg.position().top);
+                if (messages.length === 15) {
+                    previousMessageBatchRecieved = true;
+                }
+            }, 100);
+
+        }
+
+        function getMessagesHtml(messagesObjs) {
+            var messagesHtml = "";
+            var today = new Date();
+            for (var i = messagesObjs.length - 1; i >= 0; i--) {
+                var message = messagesObjs[i];
+                var date = dateFromJSON(message.SentTime);
+                var time = date.getStringTime();
+                messagesHtml += "<dt class='pull-right date'>" + ((DatesAreTheSame(date, today)) ? time: date.getStringDate() + " " + time) + "</dt>";
+                if (message.Size === 0) {
+                    messagesHtml += "<dt>" + message.UserName + "</dt><dd>" + message.Text + "<dd>";
+                } else {
+                    message.url = message.Text;
+                    message.sender = message.UserName;
+                    message.name = message.Text.split("/").pop();
+                    message.size = message.Size;
+                    message.html = "<img src='/Content/img/fileicon.png' width='150'/>";
+                    messagesHtml += getFileThumbnailHtml(message);
+                }
+                
+            };
+            return messagesHtml;
+        }
+
+        function dateFromJSON(str) {
+            var m = str.match(/(\d+)-(\d+)-(\d+)T(\d+):(\d+):(\d+)/);
+            return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+        }
+
+        function DatesAreTheSame(date1, date2) {
+            return date1.setHours(0, 0, 0, 0) === date2.setHours(0, 0, 0, 0);
+        }
+
+              
+
+        $.fn.showAsCurrent = function () {
+            if ($(this).selector !== $currentWindow.selector) {
+                console.log($currentWindow);
+                console.log($(this));
+                $currentWindow.hide();
+                this.fadeIn(500);
+                $currentWindow = $(this);
+            }
+        };
+
+        $('#btn-connect').click(function () {
+            var username = $('#nickname').val();
+            var identity = new Identity();
+            if (!identity.isValid && username) {
+                chat.server.notify(new NewIdentity(username));
+            }
+        });
+
+        $("#message-form").submit(function (e) {
+            e.preventDefault && e.preventDefault();
+            e.stopPropagation && e.stopPropagation();
+        });
+
+        $('#nickname').on('keyup',
+            function (e) {
+                if (e.which === 13 && $('#nickname').val()) {
+
+                    $('#btn-connect').click();
+                }
+
+                if ($('#nickname').val()) {
+                    $('#btn-connect').fadeIn(500);
+                } else {
+                    $('#btn-connect').fadeOut(200);
+                }
+            });
+
+        $('#messages').on('click', 'img.enlarge-img', function () {
+            var img = $(this).clone();
+            var link = "<a href=" +
+                img.attr('src') +
+                " class='btn btn-default pull-left download-button' download>" +
+                "<span class='glyphicon glyphicon-floppy-save'></span>" +
+                "</a>";
+            $("#modal-title").html($(img).data("name"));
+            $("#header-content").html(link);
+            img.removeClass("enlarge-img");
+            $('#modal-body').html(img);
+            $('#myModal').modal('show');
+        });
+
+
+        function pageStart() {
+            var identity = new Identity();
+            if (identity.isValid) {
+                chat.server.notify(identity);
+            }
+            else {
+                nicknameWell.showAsCurrent();
+                connectIfHaveToken();
+            }
+        }
+
+        function connectIfHaveToken() {
+            var identity = new Identity();
+            if (identity.isValid && nicknameWell.selector === $currentWindow.selector) {
+                chat.server.notify(identity);
+            } else if (!identity.isValid) {
+                setTimeout(connectIfHaveToken, 1000);
+            }
+        }
+
+
+        messageBoard.scroll(function () {
+            if ($(this).scrollTop() < 1 && previousMessageBatchRecieved) {
+                var oldestMessageDate = $("#oldest-message").val();
+                chat.server.getOlderMessages(oldestMessageDate, new Identity());
+                previousMessageBatchRecieved = false;
+            }
+            
+            if (preventOnScroll) {
+                preventOnScroll = false;
+                return;
+            }
+
+            if (!messageBoard.scrolledToBottom()) {
+                autoScrollingEnabled = false;
+            } else {
+                autoScrollingEnabled = true;
+            }
+
+        });
+
+        function usernameUpdate(userList) {
+            var users = "";
+            userList.forEach(function (name) {
+                users += "<li>" + name + "</li>";
+            });
+
+            $('#logged-users').html(users);
+        }
+
+
+        chat.client.differentName = function () {
+            var token = localStorage.getItem('token');
+            var name = localStorage.getItem('name');
+            localStorage.clear();
+
+            if (name && token) {
+                errorAlert("Sorry, but your previous username " + name + " has already been taken by someone else. Please choose another one!");
+            } else {
+                errorAlert("Sorry, but username " + name + " is already taken.  Please choose another one!");
+            }
+
+            nicknameWell.showAsCurrent();
+            connectIfHaveToken();
+            return false;
+        };
+
+        chat.client.loggedOut = function () {
+            localStorage.clear();
+            swal("You have successfully logged out!", "See you later!", "success");
+            nicknameWell.showAsCurrent();
+            connectIfHaveToken();
+            return false;
+        }
+
+        chat.client.joinedToChat = function (token, userlist) {
+
+            if (token !== "") {
+                localStorage.setItem("token", token);
+            }
+            $('#message-well').showAsCurrent();
+            usernameUpdate(userlist);
+
+        };
+
+        chat.client.sasAquired = function (url, sas) {
+            filesender.startSending(url, sas);
+        };
+
+        chat.client.addUser = function (name) {
+            $('#logged-users').append("<li>" + name + "</li>");
+        }
+
+        chat.client.enters = function (name) {
+            addToMessageBoard('<dt><i>' + name + ' joins the conversation</i></dt><dl></dl>');
+        }
+
+        chat.client.disconnected = function (name) {
+            //Calls when someone leaves the page
+
+            addToMessageBoard('<dt><i>' + name + ' leaves the conversation</i></dt><dl></dl>');
+            $('#logged-users li').remove(":contains('" + name + "')");
+        }
+
+
+        chat.client.broadcastMessage = function (name, message) {
+            var msg = "<dt>" + name + "</dt><dd>" + message + "<dd>";
+            addToMessageBoard(msg);
+        };
+
+        chat.client.broadcastImage = function (fileInfo) {
+
+            console.log(fileInfo);
+            var image = new Image();
+            image.src = fileInfo.url;
+            image.id = "image" + ++imgid;
+            image.className = "img-responsive img-thumbnail enlarge-img";
+            $(image).attr("data-name", fileInfo.name);
+            fileInfo.html = $(image).prop('outerHTML');
+            var fileThumbnail = getFileThumbnailHtml(fileInfo);
+
+            $(image).on('load', function () {
+                addToMessageBoard(fileThumbnail);
+            });
+
+        };
+
+        chat.client.broadcastVideo = function (fileInfo) {
+            fileInfo.html = "<video controls><source src='" + fileInfo.url + "' type='" + fileInfo.type + "'</video>";
+            var fileThumbnail = getFileThumbnailHtml(fileInfo);
+            addToMessageBoard(fileThumbnail);
+        };
+
+        chat.client.broadcastAudio = function (fileInfo) {
+            fileInfo.html = "<audio controls><source src='" + fileInfo.url + "' type='" + fileInfo.type + "'</audio>";
+            var fileThumbnail = getFileThumbnailHtml(fileInfo);
+            addToMessageBoard(fileThumbnail);
+
+        };
+
+        chat.client.broadcastFile = function (fileInfo) {
+            fileInfo.html = "<img src='/Content/img/fileicon.png' width='150'/>";
+            var fileThumbnail = getFileThumbnailHtml(fileInfo);
+            addToMessageBoard(fileThumbnail);
+        };
+
+        chat.client.fileTooBig = function (fileSizeInBytes) {
+            showFileInput();
+            swal("File too big!", "Maximum filesize is " + parseInt(fileSizeInBytes) / mb + "MB", "error");
+        }
+
+        
+
+        // Start the connection.
+        $.connection.hub.start().done(function () {
+            //Calls the notify method of the server
+            pageStart();
+
+            function sendMessage() {
+                chat.server.send($('#myMessage').val(), new Identity());
+                autoScrollingEnabled = true;
+                $('#myMessage').val('').focus();
+            }
+
+            $('#log_out').click(function (e) {
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
+                chat.server.logOut();
+            });
+
+            $('#sendbutton').click(function () {
+                sendMessage();
+                $(this).hide();
+            });
+
+            $('#send-file').click(function () {
+                var files = document.getElementById('myFile').files;
+
+                if (files.length > 0 && !window.fileSender) {
+                    filesender = new FileSender(files[0]);
+                    filesender.broadcastFile();
+                }
+            });
+
+
+            $('#myMessage').on('keyup', function (e) {
+
+                if (e.which === 13) {
+                    e.preventDefault && e.preventDefault();
+                    e.stopPropagation && e.stopPropagation();
+                    if ($('#myMessage').val()) {
+                        sendMessage();
+                    }
+
+                }
+
+                for (var i in map) {
+                    if (map.hasOwnProperty(i)) {
+                        var regex = new RegExp(escapeSpecialChars(i), 'gim');
+                        this.value = this.value = this.value.replace(regex, map[i]);
+                    }
+                }
+
+                if ($('#myMessage').val()) {
+
+                    $('#sendbutton').fadeIn(500);
+                } else {
+                    $('#sendbutton').hide();
+                }
+
+            });
+        });
+
+        $.connection.hub.disconnected(function () {
+
+            if ($.connection.hub.lastError) {
+
+                //            alert("Disconnected. Reason: " +  $.connection.hub.lastError.message);
+                swal({
+                    title: 'You have been disconnected',
+                    type: "error",
+
+                    showCancelButton: false,
+                    showLoaderOnConfirm: true,
+                    allowOutsideClick: false,
+                    closeOnConfirm: false,
+                    confirmButtonColor: '#F27474',
+                    confirmButtonText: 'Reconnect me!'
+
+                }, function (isConfirm) {
+                    swal("Reconnecting...", "", "warning");
+                    $.connection.hub.start().done(function () {
+                        swal({
+                            title: 'Connected!',
+                            timer: 500
+                        });
+                        pageStart();
+                    });
+                });
+
+                //            setTimeout(function () {
+                //                alert("RECONECTIN'");
+                //                $.connection.hub.start().done(function () {
+                //                    swal({
+                //                        title: 'Connected!',
+                //                        timer: 500
+                //                    });
+                //                    pageStart();
+                //                });
+                //            }, 6000);
+            }
+        });
+
+        function errorAlert(msg) {
+            swal(
+                'Oops...',
+                msg,
+                'error'
+            );
+        }
+
+        (function ($) {
+            $.fn.scrolledToBottom = function () {
+                return this[0].scrollHeight - this[0].scrollTop <= this.innerHeight() + 30;
+            };
+        }(jQuery));
+
+        function Identity() {
+            this.token = localStorage.getItem('token');
+            this.name = localStorage.getItem('name');
+            this.isValid = this.token && this.name;
+        }
+
+        function NewIdentity(name) {
+            this.name = name;
+            this.token = "";
+            localStorage.setItem("name", name);
+        }
+
+        function FileInfo(file) {
+            this.name = file.name;
+            this.size = file.size;
+            this.extension = file.name.split('.').pop();
+            this.type = file.type;
+        }
+
+
+        function FileSender(file) {
+            var that = this;
+            this.file = file;
+            this.reader = new FileReader();
+            this.url = null;
+            this.sas = null;
+            this.reader.onloadend = function (evt) {
+                if (evt.target.readyState === FileReader.DONE) {
+                    var requestData = new Uint8Array(evt.target.result);
+                    that.sendToAzure(requestData);
+                }
+            }
+
+            this.startSending = function (url, sastoken) {
+                this.url = url;
+                this.sas = sastoken;
+                var fileContent = that.file.slice(0, this.file.size - 1);
+                this.reader.readAsArrayBuffer(fileContent);
+            }
+
+            this.broadcastFile = function () {
+                autoScrollingEnabled = true;
+                var name = localStorage.getItem('name');
+                var token = localStorage.getItem('token');
+                var finfo = new FileInfo(this.file);
+                if (this.url != null) {
+                    finfo.url = this.url;
+                }
+                chat.server.sendFile(finfo, name, token);
+            }
+
+            this.sendToAzure = function (rawData) {
+
+                showProgressBar();
+                var uploadBar = $('#upload-bar');
+
+                $.ajax({
+                    xhr: function () {
+                        var xhr = new window.XMLHttpRequest();
+
+                        // Upload progress
+                        xhr.upload.addEventListener("progress", function (evt) {
+                            if (evt.lengthComputable) {
+                                var percentComplete = (evt.loaded / evt.total) * 100;
+                                uploadBar.css("width", percentComplete + '%');
+                                uploadBar.text(Math.round(percentComplete) + '%');
+                            }
+                        }, false);
+
+                        $('#cancel-button').click(function () {
+                            if (xhr) {
+                                xhr.abort();
+                                showFileInput();
+                                swal("Your upload has been canceled", "", "error");
+                            }
+                        });
+
+                        return xhr;
+                    },
+                    url: this.url + this.sas,
+                    type: "PUT",
+                    data: rawData,
+                    processData: false,
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
+                        xhr.setRequestHeader('x-ms-blob-content-type', that.file.type);
+                        xhr.setRequestHeader('x-ms-meta-uploadvia', 'ChatApp');
+                    },
+                    success: function (data, status) {
+                        that.broadcastFile();
+                        showFileInput();
+                    },
+                    error: function (xhr, desc, err) {
+                        console.log(desc);
+                        console.log(err);
+                    }
+                });
+            }
+        }
+
+        function showProgressBar() {
+            $('.file-input').hide();
+            $("#file-upload").prepend(
+                "<div class='text-center' id='progress-div'>" +
+                "<div class='progress progress-striped active'>" +
+                "<div class='progress-bar progress-bar-primary' id='upload-bar' role='progressbar'></div>" +
+                "</div>" +
+                "<button type='button' id='cancel-button' class='btn btn-danger'>Cancel upload</button>" +
+                "</div>"
+            );
+        }
+
+        function showFileInput() {
+            $('#progress-div').remove();
+            $('.file-input').fadeIn();
+            $('#myFile').val('');
+            filesender = null;
+        }
+
+        function getFileThumbnailHtml(file) {
+            return "<dt>" + file.sender + " sends file!" +
+                "</dt> <dd> <div class='file-thumbnail'>" +
+                "<div class='thumbnail-header'>" +
+                "<h5 class='file-name text-center'>" + file.name + "</h5></div>" +
+                "<div class='thumbnail-body'>" +
+                file.html +
+                "</div><div class='thumbnail-footer'><a href='" + file.url + "' class='btn btn-default pull-left download-button' download>" +
+                "<span class='glyphicon glyphicon-floppy-save'></span></a>" +
+                "<div class='text-right pull-right file-info'><small>Sent by:" + file.sender + "</small><br/><small>Size:" +
+                (file.size / mb).toFixed(2) +
+                " MB</small>" +
+                "</div></div></div></dd>";
+        }
+
+        function addToMessageBoard(html) {
+            var dateStamp = "<dt class='pull-right date'>" + new Date().getStringTime() + "</dt>";
+            $("#messages").append(dateStamp + html);
+
+            if (autoScrollingEnabled) {
+                messageBoard.scrollTop(messageBoard[0].scrollHeight);
+                preventOnScroll = true;
+            }
+        }
+
+        Date.prototype.getStringTime = function() {
+            var hours = this.getHours();
+            var minutes = this.getMinutes();
+            return (hours < 10 ? "0" + hours: hours) + ":" + (minutes < 10 ? "0" + minutes: minutes);
+        }
+
+        Date.prototype.getStringDate = function () {
+            var day = this.getDate(), month = this.getMonth() + 1, year = this.getFullYear();
+            return (day < 10 ? "0" + day: day) + "-" + (month < 10 ? "0" + month: month) + "-" + year;
+        }
+
+
+    </script>
+</body>
+</html>
